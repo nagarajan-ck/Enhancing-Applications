@@ -20,6 +20,7 @@ from opencensus.ext.flask.flask_middleware import FlaskMiddleware
 
 # Logging
 logger = logging.getLogger(__name__)
+logger.addHandler(AzureLogHandler(connection_string='InstrumentationKey=15d02af3-bb8b-48ab-937e-7f84588dfce0;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/'))
 
 # Metrics
 exporter = metrics_exporter.new_metrics_exporter(
