@@ -17,10 +17,11 @@ from opencensus.ext.azure.trace_exporter import AzureExporter
 from opencensus.trace.samplers import ProbabilitySampler
 from opencensus.trace.tracer import Tracer
 from opencensus.ext.flask.flask_middleware import FlaskMiddleware
+from opencensus.ext.azure.log_exporter import AzureEventHandler
 
 # Logging
 logger = logging.getLogger(__name__)
-logger.addHandler(AzureLogHandler(connection_string='InstrumentationKey=15d02af3-bb8b-48ab-937e-7f84588dfce0;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/'))
+logger.addHandler(AzureEventHandler(connection_string='InstrumentationKey=15d02af3-bb8b-48ab-937e-7f84588dfce0;IngestionEndpoint=https://westus-0.in.applicationinsights.azure.com/'))
 
 # Metrics
 exporter = metrics_exporter.new_metrics_exporter(
@@ -79,11 +80,13 @@ def index():
 
         # Get current values
         vote1 = r.get(button1).decode('utf-8')
-        tracer.span(name="voted for cats")
+        
+        with tracer.span(name='voted for cats'):            
+            print('Voted for cats')
 
         vote2 = r.get(button2).decode('utf-8')
-        tracer.span(name="voted for dogs")
-
+        with tracer.span(name='voted for dogs'):            
+            print('Voted for dogs')
 
         # Return index with values
         return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
@@ -110,12 +113,23 @@ def index():
         else:
 
             # Insert vote result into DB
+            
             vote = request.form['vote']
-            r.incr(vote,1)
+            print(vote)
+            with tracer.span(name=vote) as span:
+                r.incr(vote, 1)
+
 
             # Get current values
             vote1 = r.get(button1).decode('utf-8')
             vote2 = r.get(button2).decode('utf-8')
+
+
+            properties = {'custom_dimensions': {'Cats Vote': vote1}}
+            logger.warning("Voted for cats", extra=properties)
+
+            properties = {'custom_dimensions': {'Dogs Vote': vote2}}
+            logger.warning("Voted for dogs", extra=properties)
 
             # Return results
             return render_template("index.html", value1=int(vote1), value2=int(vote2), button1=button1, button2=button2, title=title)
